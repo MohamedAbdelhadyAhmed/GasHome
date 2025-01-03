@@ -40,7 +40,7 @@ class LoginController extends Controller
             ->first();
         if (!$user) {
             $user = Driver::where('phone_number', $request->phone_number)
-                ->where('status', 'active')
+                // ->where('status', 'active')
                 ->first();
         }
         if (!$user) {

@@ -53,6 +53,7 @@ class LoginController extends Controller
                 'data' => [],
             ]);
         }
+                /** @var \App\Models\Driver $driver */
         $driver->tokens()->delete();
 
         return response()->json([

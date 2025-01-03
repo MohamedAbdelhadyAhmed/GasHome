@@ -16,9 +16,11 @@ return new class extends Migration
             $table->string('name_ar');
             $table->string('name_en');
             $table->json('coordinates');
-            
+            $table->enum('status', ['active', 'inactive'])->default('active');
 
-
+            $table->decimal('latitude', 10, 8)->nullable();
+            $table->decimal('longitude', 11, 8)->nullable();
+            $table->decimal('radius')->nullable();
             // $table->enum('region_ar', ['Mecca', 'Medina', 'Riyadh'])->default('makkah');
             // $table->enum('region_en', ['مكة', 'المدينة', 'الرياض'])->default('makkah');
             $table->timestamps();

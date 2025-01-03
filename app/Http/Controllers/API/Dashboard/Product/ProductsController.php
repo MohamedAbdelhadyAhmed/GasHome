@@ -22,12 +22,21 @@ class ProductsController extends Controller
         $descriptionField = $locale === 'ar' ? 'description_ar' : 'description_en';
 
         $products = Product::where('category_id', $category_id)
-        ->select('id', "$nameField as name", "$descriptionField as description", 'price', 'image')
-        ->get()
-        ->map(function ($product) {
-            $product->image = $product->image ? asset('storage/' . $product->image) : null;
-            return $product;
-        });
+            ->select(
+                'id',
+                "$nameField as name",
+                "$descriptionField as description",
+                'price',
+                'quantity',
+                'last_quantity',
+                'status',
+                'image'
+            )
+            ->get()
+            ->map(function ($product) {
+                $product->image = $product->image ? asset('storage/' . $product->image) : null;
+                return $product;
+            });
         if ($products->isEmpty()) {
             return response()->json([
                 'message' => "Products Not Found",
@@ -45,21 +54,26 @@ class ProductsController extends Controller
     public function allProducts()
     {
         $locale = request()->header('Accept-Language', 'ar');
+        $nameField = $locale === 'ar' ? 'name_ar' : 'name_en';
+        $descriptionField = $locale === 'ar' ? 'description_ar' : 'description_en';
 
         $products = Product::where('quantity', '>', 1)
             ->where('status', 'active')
+            ->select(
+                'id',
+                "$nameField as name",
+                "$descriptionField as description",
+                'price',
+                'quantity',
+                'last_quantity',
+                'status',
+                'image',
+            )
             ->get()
-            ->map(function ($product) use ($locale) {
-                $product->image = $product->image ? url(Storage::url($product->image)) : null;
-                $product->description = $locale === 'ar' ?
-                    $product->description_ar : $product->description_en;
-                $product->name = $locale === 'en' ?
-                    $product->name_ar : $product->name_en;
-                unset($product->description_ar, $product->description_en, $product->name_ar, $product->name_en);
-
+            ->map(function ($product) {
+                $product->image = $product->image ? asset('storage/' . $product->image) : null;
                 return $product;
             });
-
         if ($products->isEmpty()) {
             // $message = $locale === 'ar' ? "لا توجد منتجات" : "Products Not Found";
             return response()->json([
@@ -78,14 +92,10 @@ class ProductsController extends Controller
     public function allCategories()
     {
         $locale = request()->header('Accept-Language', 'ar');
+        $nameField = $locale === 'ar' ? 'name_ar' : 'name_en';
         $categories = Category::where('status', 'active')
-            ->select('id', 'name_ar', 'name_en')
-            ->get()
-            ->map(function ($category) use ($locale) {
-                $category->name = $locale === 'ar' ? $category->name_ar : $category->name_en;
-                unset($category->name_ar, $category->name_en);
-                return $category;
-            });
+            ->select('id', "$nameField as name")
+            ->get();
 
         if ($categories->isEmpty()) {
             return response()->json([
@@ -114,7 +124,7 @@ class ProductsController extends Controller
             'price' => ['required', 'numeric'],
             // 'size' => ['nullable', 'string'],.
             'quantity' => ['required', 'integer'],
-            'image' => ['required', 'image', 'mimes:jpeg,png,jpg,gif,svg', 'max:4048'],
+            'image' => ['required', 'image'],
             'category_id' => ['required', 'exists:categories,id'],
         ]);
 
@@ -134,7 +144,7 @@ class ProductsController extends Controller
                 ]
             );
 
-            $product->image = $product->image ? url(Storage::url($product->image)) : null;
+            $product->image = $product->image ? Storage::url($product->image) : null;
             return response()->json([
                 'message' => "Product Created Successfully",
                 'data' => $product,

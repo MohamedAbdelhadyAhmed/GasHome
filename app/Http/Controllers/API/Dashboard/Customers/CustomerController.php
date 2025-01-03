@@ -27,7 +27,7 @@ class CustomerController extends Controller
     public function singleCustomer($id)
     {
 
-        $customer = User::with('orders.items.product')->find($id);
+        $customer = User::with(['addresses','orders.items.product'])->find($id);
 
         if($customer) {
             return response()->json([

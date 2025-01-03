@@ -3,17 +3,18 @@
 namespace App\Http\Controllers\API\User\Auth;
 
 use App\Models\User;
-use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
 use App\Models\Address;
+use Illuminate\Http\Request;
+use App\Services\MadarSmsService;
+use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use App\Services\MadarSmsService;
+use Illuminate\Support\Facades\Http;
 
 class RegisterController extends Controller
 {
 
-    public function store(Request $request, MadarSmsService $smsService)
+    public function store(Request $request)
     {
         $data = $request->validate([
             'first_name' => ['required', 'string'],
@@ -22,32 +23,56 @@ class RegisterController extends Controller
             'password' => ['required', 'min:8', 'max:255', 'confirmed'],
         ]);
 
-        // Generate random 4-digit code
         $code = rand(1000, 9999);
         $data['code'] = $code;
         $data['status'] = 'inactive';
         $data['password'] = Hash::make($request->password);
 
-        // Store user in database
         $user = User::create($data);
 
         if ($user->id) {
+            $phoneNumber = $user->phone_number;
+            $messageBody = "Your verification code is: $code";
 
+            // try {
+            //     $smsResponse = $this->sendSms($phoneNumber, $messageBody);
+            //     if (isset($smsResponse['status']) && $smsResponse['status'] === 'Success') {
+            //         $token = "Bearer " . $user->createToken('user-token', ['role:user'])->plainTextToken;
+            //         $user->token = $token;
+
+            //         return response()->json([
+            //             'message' => "User Created and SMS Sent Successfully",
+            //             'data'    => $user,
+            //         ]);
+            //     }
+
+            //     return response()->json([
+            //         'message' => "User Created, but SMS Sending Failed",
+            //         'data'    => $user,
+            //         'smsError' => $smsResponse['message'] ?? 'Unknown error',
+            //     ]);
+            // } catch (\Exception $e) {
+            //     return response()->json([
+            //         'message' => "User Created, but SMS Sending Failed",
+            //         'data'    => $user,
+            //         'exception' => $e->getMessage(),
+            //     ]);
+            // }
             $token = "Bearer " . $user->createToken('user-token', ['role:user'])->plainTextToken;
             $user->token = $token;
 
-
             return response()->json([
-                'message' => "User Created, but SMS Sending Failed",
+                'message' => "User Created and SMS Sent Successfully",
                 'data'    => $user,
             ]);
         }
 
-        return response()->json([
+        return response()->json(data: [
             'message' => "Something Went Wrong",
             'data' => [],
         ]);
     }
+
 
 
 
@@ -76,5 +101,20 @@ class RegisterController extends Controller
                 'data' => [],
             ]);
         }
+    }
+
+    public function sendSms($number, $message)
+    {
+        $url = "https://app.mobile.net.sa/api/v1/send";
+        $token = "gmillB6pQYOkxGqWKwJDU9VrEkbC3dTLSid70AAn";
+
+        $response = Http::withToken($token)->post($url, [
+            'number' => $number,
+            'senderName' => 'gazhome',
+            'messageBody' => $message,
+            'sendAtOption' => 'Now',
+            'allow_duplicate' => true,
+        ]);
+        return $response->json();
     }
 }

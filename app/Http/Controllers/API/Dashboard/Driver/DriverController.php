@@ -13,7 +13,10 @@ class DriverController extends Controller
 {
     public function getDrivers()
     {
-        $drivers = Driver::all();
+        $drivers = Driver::all()->map(function ($driver) {
+            $driver->image = $driver->image ? Storage::url($driver->image) : null;
+            return $driver;
+        });
 
         if ($drivers->isEmpty()) {
             return response()->json([
@@ -37,7 +40,7 @@ class DriverController extends Controller
                 'data' => [],
             ]);
         }
-
+        $driver->image = $driver->image ? Storage::url($driver->image) : null;
         return response()->json([
             'message' => "Driver retrieved successfully",
             'data' => $driver,
@@ -57,9 +60,10 @@ class DriverController extends Controller
         ]);
 
         if ($request->hasFile('image') && $request->file('image')->isValid()) {
+            // $data['image'] = $request->file('image')
+            // ->store('uploads/drivers',['disk' => 'public']);
             $data['image'] = $request->file('image')
-            ->store('uploads/drivers',['disk' => 'public']);
-
+                ->store('uploads/drivers', ['disk' => 'public']);
         }
         $data['password'] = Hash::make($request->phone_number);
         $driver = Driver::create($data);
@@ -67,6 +71,8 @@ class DriverController extends Controller
         // if ($driver->image) {
         //     $driver->image = url(Storage::url($driver->image));
         // }
+        $driver->image = $driver->image ? Storage::url($driver->image) : null;
+
         return response()->json([
             'message' => "Driver added successfully",
             'data' => $driver,

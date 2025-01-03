@@ -2,14 +2,15 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\MyFatoorahController;
 use App\Http\Controllers\API\User\Cart\CartController;
 use App\Http\Controllers\API\User\Auth\LoginController;
 use App\Http\Controllers\API\User\Orders\OrderController;
 use App\Http\Controllers\API\User\Auth\PasswordController;
 use App\Http\Controllers\API\User\Auth\RegisterController;
 use App\Http\Controllers\API\User\Orders\PaymentController;
-use App\Http\Controllers\API\Dashboard\Product\ProductsController;
 use App\Http\Controllers\API\User\Address\AddressController;
+use App\Http\Controllers\API\Dashboard\Product\ProductsController;
 
 /*
 |--------------------------------------------------------------------------
@@ -35,8 +36,8 @@ Route::prefix('user')->group(function () {
     // Route::middleware(['auth:sanctum', 'type.user'])->group(function () {
     //  get all avilable products or categories with its products in home page  //  ProductsController same in user and admin
     Route::get('/categories', [ProductsController::class, 'allCategories']);
-    Route::get('/products', [ProductsController::class, 'allProducts']);
     Route::get('/products/{category_id}', [ProductsController::class, 'index']);
+    Route::get('/products', [ProductsController::class, 'allProducts']);
     // Route::get('/products/{id}', [ProductsController::class,'show']);
     //======================================== Cart  ====================================
     Route::get('/cart', [CartController::class, 'index']);
@@ -51,9 +52,9 @@ Route::prefix('user')->group(function () {
     Route::post('/complete-order', [OrderController::class, 'completeOrder']);
     Route::get('/all-orders', [OrderController::class, 'getAllUserOrders']);
     Route::get('/order/{id}', [OrderController::class, 'getOrderById']);
+    Route::get('/pay-online/{}', [MyFatoorahController::class, 'getPayLoadData']);
     //============================================ payment============================================
     Route::post('/payment/process', [PaymentController::class, 'paymentProcess']);
-    Route::match(['GET', 'POST'], '/payment/callback', [PaymentController::class, 'callBack'])->name('payment.callback');
     //============================================ end payment============================================
 });
 

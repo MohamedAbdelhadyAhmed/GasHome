@@ -21,13 +21,43 @@ class Order extends Model
         'payment_methode',
         'payment_status',
         'order_status',
+        'available_address_id',
     ];
+    // public function user()
+    // {
+    //     return $this->belongsTo(User::class, 'user_id');
+    // }
+
+    // public function productss()
+    // {
+    //     return $this->belongsToMany(
+    //         Product::class,
+    //         'order_items',
+    //         'order_id',
+    //         'product_id'
+    //     );
+    // }
+    // public function items()
+    // {
+    //     return $this->hasMany(OrderItems::class, 'order_id');
+    // }
+
+    // public function products()
+    // {
+    //     return $this->hasManyThrough(Product::class, OrderItems::class, 'order_id', 'id', 'id', 'product_id');
+    // }
+
+
+    // public function address()
+    // {
+    //     return $this->belongsTo(Address::class);
+    // }
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
     }
 
-    public function productss()
+    public function products()
     {
         return $this->belongsToMany(
             Product::class,
@@ -36,19 +66,16 @@ class Order extends Model
             'product_id'
         );
     }
+
     public function items()
     {
         return $this->hasMany(OrderItems::class, 'order_id');
     }
 
-    public function products()
-    {
-        return $this->hasManyThrough(Product::class, OrderItems::class, 'order_id', 'id', 'id', 'product_id');
-    }
-
-
     public function address()
     {
-        return $this->belongsTo(Address::class);
+        return $this->belongsTo(Address::class, 'address_id');
     }
+
+  
 }

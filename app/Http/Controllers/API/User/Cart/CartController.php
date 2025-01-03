@@ -18,7 +18,10 @@ class CartController extends Controller
         if (!$user) {
             return response()->json(['message' => 'Unauthorized', 'data' => []], 401);
         }
-        $locale = request()->header('Accept-Language', 'en');
+        $locale = request()->header('Accept-Language', 'ar');
+        $nameField = $locale === 'ar' ? 'name_ar' : 'name_en';
+        $descriptionField = $locale === 'ar' ? 'description_ar' : 'description_en';
+
         $cartItems = DB::table('carts')
             ->join(
                 'products',
@@ -29,9 +32,13 @@ class CartController extends Controller
             ->where('carts.user_id', $user->id)
             ->select(
                 'products.id',
-                $locale === 'ar' ? 'products.name_ar as name' : 'products.name_en as name',
-                $locale === 'ar' ? 'products.description_ar as description' : 'products.description_en as description',
+                "products.$nameField as name",
+                "products.$descriptionField as description",
                 'products.price',
+                'products.quantity',
+                'products.last_quantity',
+                'products.status',
+                'products.image',
                 'carts.quantity as quantity_in_cart',
                 DB::raw('products.price * carts.quantity as total_price')
             )

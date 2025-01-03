@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use App\Models\Address;
 
-class OrderController extends Controller
+class OrderControllerTest extends Controller
 {
     //
     // public function completeOrder()
@@ -144,7 +144,7 @@ class OrderController extends Controller
                 'order_status' => 'pending',
                 'delivery_date' => $data['delivery_date'],
             ]);
-            
+
         }
     }
 }

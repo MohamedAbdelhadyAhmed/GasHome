@@ -21,11 +21,8 @@ return new class extends Migration
             $table->string('vehicle_license');
             $table->string('vehicle_number');
             $table->string('code')->nullable();
-
-
-            $table->enum('status', ['active', 'inactive'])->default('inactive');
-            // address
-             $table->string('address');
+            $table->enum('status', ['active', 'inactive'])->default('active');
+            $table->string('address');
             // $table->string('state'); // المحافظة
             // $table->string('city');
             // $table->string('street_name');

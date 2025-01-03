@@ -16,6 +16,8 @@ class RegionController extends Controller
             [
                 'name_ar' => 'required|string',
                 'name_en' => 'required|string',
+                'latitude' => 'required',
+                'longitude' => 'required',
                 'coordinates' => 'required|array',
                 'coordinates.*.lat' => 'required|numeric',
                 'coordinates.*.lng' => 'required|numeric',
@@ -26,6 +28,8 @@ class RegionController extends Controller
             [
                 'name_ar' => $data['name_ar'],
                 'name_en' => $data['name_en'],
+                'latitude' => $data['latitude'],
+                'longitude' => $data['longitude'],
                 'coordinates' =>  json_encode($data['coordinates']),
 
             ]
@@ -38,7 +42,13 @@ class RegionController extends Controller
     public function allRegions()
     {
         // dd('all regions');
-        $regions = AvailableAddress::all();
+        $locale = request()->header('Accept-Language', 'ar');
+        $nameField = $locale === 'ar' ? 'name_ar' : 'name_en';
+        $regions = AvailableAddress::where('status', 'active')
+        ->select('id', "$nameField as name" , 'latitude','radius',
+        'longitude', 'coordinates')
+        ->get();
+
         if (empty($regions)) {
             return response()->json([
                 'message' => 'No regions found',

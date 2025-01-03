@@ -8,8 +8,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Driver extends Model
 {
-    use  HasApiTokens,HasFactory;
-    protected $fillable = [ 'name','password', 'phone_number','address' ,'license_number' ,'vehicle_number','status' , 'image','vehicle_license'];
+    use  HasApiTokens, HasFactory;
+    protected $fillable = ['name', 'password', 'phone_number', 'address', 'license_number', 'vehicle_number', 'status', 'image', 'vehicle_license'];
 
-     protected $hidden = ['created_at', 'updated_at'];
+    protected $hidden = ['created_at', 'updated_at'];
+    public function orders()
+    {
+        return $this->hasMany(Order::class, 'driver_id');
+    }
 }

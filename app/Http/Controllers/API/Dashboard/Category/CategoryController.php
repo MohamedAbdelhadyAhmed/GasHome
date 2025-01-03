@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Storage;
 
 class CategoryController extends Controller
 {
+
     public function index()
     {
         $locale = request()->header('Accept-Language', 'ar');

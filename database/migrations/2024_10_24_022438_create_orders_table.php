@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('orders', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
-            $table->foreignId('available_address_id')->constrained('available_addresses')->cascadeOnDelete();
+            // $table->foreignId('available_address_id')->constrained('available_addresses')->cascadeOnDelete();
 
             $table->foreignId('address_id')->constrained('addresses')->cascadeOnDelete();
             $table->foreignId('driver_id')->nullable()->constrained('drivers')->nullOnDelete();
@@ -24,7 +24,8 @@ return new class extends Migration
             $table->string('delivery_date')->nullable();
             $table->enum('payment_methode', ['visa','cod'])->default('visa');
             $table->enum('payment_status', ['pending','paid','failed'])->default('pending');
-            $table->enum('order_status', ['pending', 'completed', 'cancelled','delivered'])->default('pending');
+            $table->enum('order_status', ['pending', 'shipped', 'cancelled','delivered'])->default('pending');
+            $table->string('payment_id')->nullable();
             $table->timestamps();
         });
     }

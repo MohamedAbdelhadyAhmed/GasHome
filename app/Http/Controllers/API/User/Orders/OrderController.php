@@ -2,23 +2,18 @@
 
 namespace App\Http\Controllers\API\User\Orders;
 
+use Log;
 use App\Models\Cart;
 use App\Models\Order;
+use App\Models\Address;
 use App\Models\OrderItems;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
-use App\Models\Address;
-use App\Interfaces\PaymentGatewayInterface;
+use MyFatoorah\Library\API\Payment\MyFatoorahPayment;
 
 class OrderController extends Controller
 {
-    protected PaymentGatewayInterface $paymentGateway;
-
-    public function __construct(PaymentGatewayInterface $paymentGateway)
-    {
-        $this->paymentGateway = $paymentGateway;
-    }
 
     public function createOrder()
     {
@@ -30,7 +25,7 @@ class OrderController extends Controller
         $cartItems = DB::table('carts')
             ->join('products', 'carts.product_id', '=', 'products.id')
             ->where('carts.user_id', $user->id)
-            ->select('products.id', 'products.price', 'products.name', 'products.quantity as available_quantity', 'carts.quantity as requested_quantity')
+            ->select('products.id', 'products.price', 'products.name_ar', 'products.name_en', 'products.quantity as available_quantity', 'carts.quantity as requested_quantity')
             ->get();
 
         foreach ($cartItems as $item) {
@@ -51,12 +46,10 @@ class OrderController extends Controller
             'totalCost' => $totalCost,
         ]);
     }
-
-
     public function completeOrder(Request $request)
     {
         $data = $request->validate([
-            'address_id' => 'required',
+            'address_id' => ['required', 'exists:addresses,id'],
             'payment_method' => ['required', 'in:cod,online'],
             'delivery_date' => ['required', 'date', 'date_format:Y-m-d'],
         ]);
@@ -68,34 +61,25 @@ class OrderController extends Controller
 
         $totalCost = DB::table('carts')
             ->join('products', 'carts.product_id', '=', 'products.id')
-            ->where('carts.user_id', $data['address_id'])
+            ->where('carts.user_id', $user->id)
             ->select(DB::raw('SUM(products.price * carts.quantity) as total_cost'))
             ->value('total_cost');
+
         if (!$totalCost) {
-            return response()->json([
-                'message' => 'No items in the cart',
-                'data' => []
-            ]);
+            return response()->json(['message' => 'No items in the cart', 'data' => []]);
         }
 
-        $address = Address::where('user_id', $data['address_id'])->first();
-
+        $address = Address::where('id', $data['address_id'])->where('user_id', $user->id)->first();
         if (!$address) {
-            return response()->json([
-                'message' => 'No address found',
-                'data' => []
-            ]);
+            return response()->json(['message' => 'No address found', 'data' => []]);
         }
-
-        $address_id = $data['address_id'];
-
-
         if ($data['payment_method'] == 'cod') {
-            // Process cash on delivery
             $order = Order::create([
                 'user_id' => $user->id,
-                'address_id' => $address_id,
-                'total_price' =>  $totalCost,
+                'address_id' => $data['address_id'],
+                'total_price' => $totalCost,
+                'order_status' => 'pending',
+                'payment_methode' => 'cod',
                 'delivery_date' => $data['delivery_date'],
             ]);
 
@@ -103,11 +87,14 @@ class OrderController extends Controller
 
             foreach ($cartItems as $item) {
                 $product = $item->product;
+
                 if ($product->quantity < $item->quantity) {
                     return response()->json([
                         'message' => 'Insufficient stock for product ID ' . $item->product_id,
+                        'data' => []
                     ]);
                 }
+
                 OrderItems::create([
                     'order_id' => $order->id,
                     'product_id' => $item->product_id,
@@ -116,94 +103,79 @@ class OrderController extends Controller
                 ]);
                 $product->decrement('quantity', $item->quantity);
             }
-
             Cart::where('user_id', $user->id)->delete();
-
             return response()->json([
-                'message' => 'Order created successfully',
-                'order' => $order,
+                'message' => 'Order created successfully with Cash on Delivery.',
+                'data' => $order,
             ]);
         } elseif ($data['payment_method'] == 'online') {
-            // Process online payment using MyFatoorah
             $order = Order::create([
                 'user_id' => $user->id,
-                'address_id' => $address_id,
+                'address_id' => $data['address_id'],
                 'total_price' => $totalCost,
-                'payment_status' => 'pending',
-                'order_status' => 'pending',
                 'delivery_date' => $data['delivery_date'],
             ]);
-
-
-            $paymentData = [
-                // 'Amount' => $totalCost,
-                'InvoiceValue' => $totalCost,
-                'DisplayCurrencyIso' => 'SAR',
-                'InvoiceValue' => $totalCost,
-                'CustomerName' => $user->first_name . ' ' . $user->last_name,
-                'CustomerMobile' => $user->phone_number,
-
-                // 'CallBackUrl' => route('payment.callback'), // رابط الرجوع
-                // 'NotificationOption' => 'LNK',
-                // 'Language' => 'en',
-            ];
-
-            // إرسال الدفع باستخدام البيانات التي تم تحديدها
-            $paymentResponse = $this->paymentGateway->sendPayment($paymentData);
-
-            if ($paymentResponse['success']) {
-                return response()->json([
-                    'message' => 'Payment initiated successfully',
-                    'payment_url' => $paymentResponse['url']
-                ]);
-            } else {
-                return response()->json([
-                    'message' => 'Payment initiation failed',
-                    'error' => 'Payment failed, please try again.'
-                ]);
-            }
+            //يتم توجيه الطلب إلى كلاس MyFatoorahController واستدعاء الدالة index الخاصة به.
+            $mfController = new \App\Http\Controllers\MyFatoorahController();
+            // return $mfController->index()->with('oid', $order->id);
+            return redirect()->route('myfatoorah.index', ['oid' => $order->id]);
         }
     }
-
     // =====================================get Orders ===================================
+    // public function getAllUserOrders()
+    // {
+    //     $user = auth()->guard('sanctum')->user();
+    //     if (!$user) {
+    //         return response()->json(['message' => 'User not found', 'data' => []]);
+    //     }
+    //     $orders = Order::where('user_id', $user->id)->with(['orderItems.product'])
+    //     ->get();
+    //     if (!$orders) {
+    //         return response()->json(['message' => 'No orders found', 'data' => []]);
+    //     }
+    //     return response()->json([
+    //         'message' => 'All orders',
+    //         'data' => $orders,
+    //     ]);
+    // }
     public function getAllUserOrders()
     {
-        $user = auth()->guard('sanctum')->user();
-        if (!$user) {
-            return response()->json(['message' => 'User not found', 'data' => []]);
-        }
-        $orders = Order::where('user_id', $user->id)->get();
-        if (!$orders) {
-            return response()->json(['message' => 'No orders found', 'data' => []]);
-        }
-        return response()->json([
-            'message' => 'All orders',
-            'data' => $orders,
-        ]);
+        
     }
+
     public function getOrderById($id)
     {
         $user = auth()->guard('sanctum')->user();
         if (!$user) {
             return response()->json(['message' => 'User not found', 'data' => []]);
         }
+        $locale = request()->header('Accept-Language', 'ar');
+        $nameField = $locale === 'ar' ? 'name_ar' : 'name_en';
+        $descriptionField = $locale === 'ar' ? 'description_ar' : 'description_en';
+
         $order = Order::where('user_id', $user->id)
             ->where('id', $id)
-            ->with('products')
+            ->with(['items.product' => function ($query) use ($nameField, $descriptionField) {
+                $query->select(
+                    'id',
+                    "$nameField as name",
+                    "$descriptionField as description",
+                    'price',
+                    'quantity',
+                    'last_quantity',
+                    'status',
+                    'image'
+                );
+            }])
             ->first();
 
-        // $order = Order::with(['items', 'products'])
-        // ->where('user_id', $user->id)
-        // ->where('id', $id)
-        // ->first();
-
-        // $order = Order::where('user_id', $user->id)->where('id', $id)->first();
         if (!$order) {
             return response()->json([
                 'message' => 'Order not found',
                 'data' => []
             ]);
         }
+
         return response()->json([
             'message' => 'Order details',
             'data' => $order,

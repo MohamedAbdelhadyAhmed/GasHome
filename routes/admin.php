@@ -2,12 +2,14 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\API\Dashboard\Orders\OrderController;
+use App\Http\Controllers\API\Dashboard\Category\HomeController;
 use App\Http\Controllers\API\Dashboard\Driver\DriverController;
+use App\Http\Controllers\API\Dashboard\Region\RegionController;
 use App\Http\Controllers\API\Dashboard\Product\ProductsController;
 use App\Http\Controllers\API\Dashboard\Category\CategoryController;
 use App\Http\Controllers\API\Dashboard\Customers\CustomerController;
 use App\Http\Controllers\API\Dashboard\Customers\DashboardController;
-use App\Http\Controllers\API\Dashboard\Region\RegionController;
 
 /*
 |--------------------------------------------------------------------------
@@ -20,15 +22,7 @@ use App\Http\Controllers\API\Dashboard\Region\RegionController;
 |
 */
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
-});
-
-// Route::apiResource('/product', ProductsController::class);
-
-
-// Route::get(uri: '/logout', [LoginController::class, 'logout']);
-
+Route::get('/home', [HomeController::class, 'index']);
 //============================= categories =============================
 Route::get('/categories', [CategoryController::class, 'index']);
 Route::post('/category/create', [CategoryController::class, 'store']);
@@ -57,21 +51,12 @@ Route::post('/add/region', [RegionController::class, 'addRegion']);
 Route::get('/regions', [RegionController::class, 'allRegions']);
 
 //============================= Dashboard Settings =============================
+Route::get('/add-user', [DashboardController::class, 'addUser']);
 Route::get('/edit-profile', [DashboardController::class, 'editProfile']);
 Route::post('/dashboard-settings/update', [DashboardController::class, 'update']);
-// use Illuminate\Support\Facades\Route;
-use App\Models\AvailableAddress;
-
-Route::get('/test-coordinates', function () {
-    $areas = AvailableAddress::all();
-    foreach ($areas as $area) {
-        echo "Area ID: " . $area->id . "<br>";
-        $polygon = json_decode($area->coordinates, true);
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            echo "Invalid JSON in area ID: " . $area->id . "<br>";
-        } else {
-            echo "Coordinates:<br>";
-            echo "<pre>" . print_r($polygon, true) . "</pre>";
-        }
-    }
-});
+//============================= Orders  =============================
+Route::patch('/orders/{order_id}/assign-driver', [OrderController::class, 'assignDriver']);
+Route::get('/orders', [OrderController::class, 'index']);
+Route::get('/orders/{id}', [OrderController::class, 'show']);
+Route::patch('/orders/{id}/status', [OrderController::class, 'updateStatus']);
+Route::delete('/orders/{id}', [OrderController::class, 'destroy']);

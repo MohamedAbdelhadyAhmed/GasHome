@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\ValidationException;
 
 class PasswordController extends Controller
@@ -25,13 +26,32 @@ class PasswordController extends Controller
             $user->code = $code;
             $user->save();
             // send code to phone number
-            $token = "Bearer " . $user->createToken('user-token', ['role:user'])->plainTextToken;
-            $user->token =  $token;
-            return response()->json([
-                'status' => true,
-                'message' => 'code sent to phone number',
-                'data' => $user,
-            ]);
+            $phoneNumber = $user->phone_number;
+            $messageBody = "Your verification code is: $code";
+            try {
+                $smsResponse = $this->sendSms($phoneNumber, $messageBody);
+                if (isset($smsResponse['status']) && $smsResponse['status'] === 'Success') {
+                    $token = "Bearer " . $user->createToken('user-token', ['role:user'])->plainTextToken;
+                    $user->token =  $token;
+                    return response()->json([
+                        'status' => true,
+                        'message' => 'code sent to phone number',
+                        'data' => $user,
+                    ]);
+                }
+
+                return response()->json([
+                    'message' => "User Created, but SMS Sending Failed",
+                    'data'    => $user,
+                    'smsError' => $smsResponse['message'] ?? 'Unknown error',
+                ]);
+            } catch (\Exception $e) {
+                return response()->json([
+                    'message' => "User Created, but SMS Sending Failed",
+                    'data'    => $user,
+                    'exception' => $e->getMessage(),
+                ]);
+            }
         } else {
             // return $this->data([], 'User not Found');
             return response()->json([
@@ -65,5 +85,21 @@ class PasswordController extends Controller
 
             ]);
         }
+    }
+
+
+    public function sendSms($number, $message)
+    {
+        $url = "https://app.mobile.net.sa/api/v1/send";
+        $token = "gmillB6pQYOkxGqWKwJDU9VrEkbC3dTLSid70AAn";
+
+        $response = Http::withToken($token)->post($url, [
+            'number' => $number,
+            'senderName' => 'gazhome',
+            'messageBody' => $message,
+            'sendAtOption' => 'Now',
+            'allow_duplicate' => true,
+        ]);
+        return $response->json();
     }
 }
